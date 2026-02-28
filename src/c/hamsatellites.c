@@ -82,15 +82,18 @@ static void update_view(void) {
 }
 
 static void up_click_handler(ClickRecognizerRef recognizer, void *context) {
-  if (s_current_pass_index > 0) {
-    s_current_pass_index--;
+  if (s_pass_count > 1) {
+    s_current_pass_index = (s_current_pass_index > 0) ? s_current_pass_index - 1
+                                                      : s_pass_count - 1;
     update_view();
   }
 }
 
 static void down_click_handler(ClickRecognizerRef recognizer, void *context) {
-  if (s_current_pass_index < s_pass_count - 1) {
-    s_current_pass_index++;
+  if (s_pass_count > 1) {
+    s_current_pass_index = (s_current_pass_index < s_pass_count - 1)
+                               ? s_current_pass_index + 1
+                               : 0;
     update_view();
   }
 }
@@ -112,23 +115,17 @@ static void canvas_update_proc(Layer *layer, GContext *ctx) {
   int16_t x = bounds.size.w - PBL_IF_ROUND_ELSE(18, 12);
 
   // Up indicator
-  if (s_current_pass_index > 0) {
-    int16_t y = PBL_IF_ROUND_ELSE(24, 10);
-    // Draw a double thickness chevron
-    for (int i = 0; i < 2; i++) {
-      graphics_draw_line(ctx, GPoint(x - 5, y + 5 + i), GPoint(x, y + i));
-      graphics_draw_line(ctx, GPoint(x, y + i), GPoint(x + 5, y + 5 + i));
-    }
+  int16_t y = PBL_IF_ROUND_ELSE(24, 10);
+  for (int i = 0; i < 2; i++) {
+    graphics_draw_line(ctx, GPoint(x - 5, y + 5 + i), GPoint(x, y + i));
+    graphics_draw_line(ctx, GPoint(x, y + i), GPoint(x + 5, y + 5 + i));
   }
 
   // Down indicator
-  if (s_current_pass_index < s_pass_count - 1) {
-    int16_t y = bounds.size.h - PBL_IF_ROUND_ELSE(24, 10);
-    // Draw a double thickness chevron
-    for (int i = 0; i < 2; i++) {
-      graphics_draw_line(ctx, GPoint(x - 5, y - 5 + i), GPoint(x, y + i));
-      graphics_draw_line(ctx, GPoint(x, y + i), GPoint(x + 5, y - 5 + i));
-    }
+  y = bounds.size.h - PBL_IF_ROUND_ELSE(24, 10);
+  for (int i = 0; i < 2; i++) {
+    graphics_draw_line(ctx, GPoint(x - 5, y - 5 + i), GPoint(x, y + i));
+    graphics_draw_line(ctx, GPoint(x, y + i), GPoint(x + 5, y - 5 + i));
   }
 }
 

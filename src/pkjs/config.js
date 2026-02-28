@@ -38,6 +38,13 @@ module.exports = [
         "min": 1,
         "max": 30,
         "step": 1
+      },
+      {
+        "type": "toggle",
+        "messageKey": "AppKeyNightMode",
+        "defaultValue": true,
+        "label": "Night Mode / Modo Nocturno",
+        "description": "Black background / Fondo negro"
       }
     ]
   },
@@ -49,22 +56,23 @@ module.exports = [
         "defaultValue": "Satellites / Satélites"
       },
       {
-        "type": "checkboxGroup",
+        "type": "checkboxgroup",
         "messageKey": "AppKeySatellites",
-        "defaultValue": ["ISS", "SO-50"],
+
+        "defaultValue": [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true],
         "label": "Select Satellites / Seleccionar Satélites",
         "options": [
-          { "label": "ISS (Crossband Repeater)", "value": "ISS" },
-          { "label": "SO-50 (SaudiSat-1C)", "value": "SO-50" },
-          { "label": "AO-27 (AMRAD-OSCAR 27)", "value": "AO-27" },
-          { "label": "AO-91 (Fox-1)", "value": "AO-91" },
-          { "label": "AO-92 (Fox-1)", "value": "AO-92" },
-          { "label": "PO-101 (Diwata-2)", "value": "PO-101" },
-          { "label": "LilacSat-2 (CAS-3H)", "value": "LilacSat-2" },
-          { "label": "IO-86 (LAPAN-A2)", "value": "IO-86" },
+          { "label": "ISS (Crossband)", "value": "ISS" },
+          { "label": "SO-50", "value": "SO-50" },
+          { "label": "AO-27", "value": "AO-27" },
+          { "label": "AO-91", "value": "AO-91" },
+          { "label": "AO-92", "value": "AO-92" },
+          { "label": "PO-101", "value": "PO-101" },
+          { "label": "LilacSat-2", "value": "LilacSat-2" },
+          { "label": "IO-86", "value": "IO-86" },
           { "label": "SONATE-2", "value": "SONATE-2" },
           { "label": "HADES-D", "value": "HADES-D" },
-          { "label": "RS95S (QMR-KWT-2)", "value": "RS95S" },
+          { "label": "RS95S", "value": "RS95S" },
           { "label": "Tevel-1", "value": "Tevel-1" },
           { "label": "Tevel-2", "value": "Tevel-2" },
           { "label": "Tevel-3", "value": "Tevel-3" },
@@ -78,7 +86,14 @@ module.exports = [
     ]
   },
   {
-    "type": "submit",
-    "defaultValue": "Save Settings / Guardar Cambios"
+    "type": "section",
+    "items": [
+      {
+        "type": "submit",
+        "defaultValue": "Save / Guardar"
+      }
+    ]
   }
 ];
+
+
