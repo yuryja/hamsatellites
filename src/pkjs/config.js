@@ -18,10 +18,10 @@ module.exports = function (lang) {
           "defaultValue": "en",
           "label": isSp ? "Idioma" : "Language",
           "options": [
-            { "label": "English", "value": "en" },
-            { "label": "Español", "value": "es" },
-            { "label": "Français", "value": "fr" },
-            { "label": "Português", "value": "pt" },
+            { "label": "English / Inglés", "value": "en" },
+            { "label": "Español / Spanish", "value": "es" },
+            { "label": "Français / Francés", "value": "fr" },
+            { "label": "Português / Portugués", "value": "pt" },
             { "label": "Italiano", "value": "it" }
           ]
         },
@@ -57,33 +57,17 @@ module.exports = function (lang) {
           "type": "heading",
           "defaultValue": isSp ? "Satélites" : "Satellites"
         },
-        {
-          "type": "checkboxgroup",
-          "messageKey": "AppKeySatellites",
-          "defaultValue": [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true],
-          "label": isSp ? "Seleccionar" : "Select",
-          "options": [
-            "ISS (Crossband)",
-            "SO-50",
-            "AO-27",
-            "AO-91",
-            "AO-92",
-            "PO-101",
-            "LilacSat-2",
-            "IO-86",
-            "SONATE-2",
-            "HADES-D",
-            "RS95S",
-            "Tevel-1",
-            "Tevel-2",
-            "Tevel-3",
-            "Tevel-4",
-            "Tevel-5",
-            "Tevel-6",
-            "Tevel-7",
-            "Tevel-8"
-          ]
-        }
+        { "type": "toggle", "messageKey": "AppKeySat_ISS", "label": "ISS (Crossband)", "defaultValue": true },
+        { "type": "toggle", "messageKey": "AppKeySat_SO50", "label": "SO-50", "defaultValue": true },
+        { "type": "toggle", "messageKey": "AppKeySat_AO27", "label": "AO-27", "defaultValue": true },
+        { "type": "toggle", "messageKey": "AppKeySat_AO91", "label": "AO-91", "defaultValue": true },
+        { "type": "toggle", "messageKey": "AppKeySat_AO92", "label": "AO-92", "defaultValue": true },
+        { "type": "toggle", "messageKey": "AppKeySat_PO101", "label": "PO-101", "defaultValue": true },
+        { "type": "toggle", "messageKey": "AppKeySat_LILAC", "label": "LilacSat-2", "defaultValue": true },
+        { "type": "toggle", "messageKey": "AppKeySat_IO86", "label": "IO-86", "defaultValue": true },
+        { "type": "toggle", "messageKey": "AppKeySat_SONATE", "label": "SONATE-2", "defaultValue": true },
+        { "type": "toggle", "messageKey": "AppKeySat_HADESD", "label": "HADES-D", "defaultValue": true },
+        { "type": "toggle", "messageKey": "AppKeySat_RS95S", "label": "RS95S", "defaultValue": true }
       ]
     },
     {
@@ -92,7 +76,3 @@ module.exports = function (lang) {
     }
   ];
 };
-
-
-
-

@@ -194,8 +194,16 @@ static void main_window_unload(Window *window) {
 }
 
 static void in_recv_handler(DictionaryIterator *iterator, void *context) {
+  Tuple *clear_t = dict_find(iterator, MESSAGE_KEY_AppKeyClearBatch);
+  if (clear_t) {
+    APP_LOG(APP_LOG_LEVEL_DEBUG, "Received ClearBatch");
+    s_pass_count = 0;
+    update_view();
+  }
+
   Tuple *lang_t = dict_find(iterator, MESSAGE_KEY_AppKeyLanguage);
   if (lang_t && lang_t->type == TUPLE_CSTRING) {
+    APP_LOG(APP_LOG_LEVEL_DEBUG, "Received Lang: %s", lang_t->value->cstring);
     if (strcmp(lang_t->value->cstring, "es") == 0)
       s_lang = LANG_ES;
     else if (strcmp(lang_t->value->cstring, "fr") == 0)
@@ -219,6 +227,7 @@ static void in_recv_handler(DictionaryIterator *iterator, void *context) {
 
   Tuple *sat_t = dict_find(iterator, MESSAGE_KEY_AppKeySatellites);
   if (sat_t && sat_t->type == TUPLE_CSTRING && s_pass_count < MAX_SATELLITES) {
+    APP_LOG(APP_LOG_LEVEL_DEBUG, "Received Pass: %s", sat_t->value->cstring);
     char buffer[128];
     strncpy(buffer, sat_t->value->cstring, sizeof(buffer));
     buffer[sizeof(buffer) - 1] = '\0';

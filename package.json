@@ -29,8 +29,21 @@
       "AppKeyLanguage",
       "AppKeySatellites",
       "AppKeyAlertTime",
-      "AppKeyNightMode"
+      "AppKeyNightMode",
+      "AppKeyClearBatch",
+      "AppKeySat_ISS",
+      "AppKeySat_SO50",
+      "AppKeySat_AO27",
+      "AppKeySat_AO91",
+      "AppKeySat_AO92",
+      "AppKeySat_PO101",
+      "AppKeySat_LILAC",
+      "AppKeySat_IO86",
+      "AppKeySat_SONATE",
+      "AppKeySat_HADESD",
+      "AppKeySat_RS95S"
     ],
+
     "resources": {
       "media": []
     }
