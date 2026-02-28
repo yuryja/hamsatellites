@@ -22,6 +22,9 @@ static int s_current_pass_index = 0;
 static int s_lang = LANG_EN;
 static bool s_night_mode = true;
 
+#define STORAGE_KEY_LANG 100
+#define STORAGE_KEY_NIGHT 101
+
 static Window *s_main_window;
 static Layer *s_canvas_layer;
 static TextLayer *s_name_layer;
@@ -203,12 +206,14 @@ static void in_recv_handler(DictionaryIterator *iterator, void *context) {
       s_lang = LANG_IT;
     else
       s_lang = LANG_EN;
+    persist_write_int(STORAGE_KEY_LANG, s_lang);
     update_view();
   }
 
   Tuple *night_mode_t = dict_find(iterator, MESSAGE_KEY_AppKeyNightMode);
   if (night_mode_t) {
     s_night_mode = night_mode_t->value->int32 == 1;
+    persist_write_int(STORAGE_KEY_NIGHT, s_night_mode ? 1 : 0);
     apply_theme();
   }
 
@@ -277,6 +282,13 @@ static void prv_init(void) {
   // AppMessage open with large buffer
   app_message_register_inbox_received(in_recv_handler);
   app_message_open(512, 512);
+
+  if (persist_exists(STORAGE_KEY_LANG)) {
+    s_lang = persist_read_int(STORAGE_KEY_LANG);
+  }
+  if (persist_exists(STORAGE_KEY_NIGHT)) {
+    s_night_mode = persist_read_int(STORAGE_KEY_NIGHT) == 1;
+  }
 
   s_main_window = window_create();
   window_set_click_config_provider(s_main_window, click_config_provider);

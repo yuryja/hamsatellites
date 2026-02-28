@@ -1,9 +1,8 @@
 var Clay = require('pebble-clay');
-var clayConfig = require('./config');
-
-var clay = new Clay(clayConfig, null, { autoHandleEvents: false });
+var configFn = require('./config');
 
 var lang = "en"; // default language
+var clay = new Clay(configFn(lang), null, { autoHandleEvents: false });
 
 function sendNextMessage(messages) {
     if (messages.length === 0) return;
@@ -18,18 +17,17 @@ function sendNextMessage(messages) {
 
 function fetchSatellitePasses(lat, lon) {
     var settings = JSON.parse(localStorage.getItem('clay-settings') || '{}');
-    var satellites = settings.AppKeySatellites || ["ISS", "SO-50", "AO-27", "AO-91", "AO-92", "PO-101", "LilacSat-2", "IO-86", "SONATE-2", "HADES-D", "RS95S", "Tevel-1", "Tevel-2", "Tevel-3", "Tevel-4", "Tevel-5", "Tevel-6", "Tevel-7", "Tevel-8"];
+    var satellites = settings.AppKeySatellites || ["ISS (Crossband)", "SO-50", "AO-27", "AO-91", "AO-92", "PO-101", "LilacSat-2", "IO-86", "SONATE-2", "HADES-D", "RS95S", "Tevel-1", "Tevel-2", "Tevel-3", "Tevel-4", "Tevel-5", "Tevel-6", "Tevel-7", "Tevel-8"];
 
     var mockPasses = satellites.map(function (satId, index) {
         var tone = "None";
-        if (satId === "SO-50") tone = "67.0";
-        else if (satId === "AO-91" || satId === "AO-92") tone = "67.0";
-        else if (satId === "ISS") tone = "67.0";
-        else if (satId === "AO-27") tone = "None"; // Varies or doesn't use normally
+        if (satId.indexOf("SO-50") !== -1) tone = "67.0";
+        else if (satId.indexOf("AO-91") !== -1 || satId.indexOf("AO-92") !== -1) tone = "67.0";
+        else if (satId.indexOf("ISS") !== -1) tone = "67.0";
 
         return {
             sat_id: satId,
-            name: satId,
+            name: satId.split(" ")[0], // Use short name
             start: Math.floor(Date.now() / 1000) + (index * 3600),
             end: Math.floor(Date.now() / 1000) + (index * 3600) + 600,
             uplink: "145.850",
@@ -68,13 +66,26 @@ function getLocationAndFetch() {
     }
 }
 
+function sendSettingsToWatch(settings) {
+    Pebble.sendAppMessage({
+        "AppKeyLanguage": settings.AppKeyLanguage || "en",
+        "AppKeyAlertTime": settings.AppKeyAlertTime || 15,
+        "AppKeyNightMode": typeof settings.AppKeyNightMode !== 'undefined' ? (settings.AppKeyNightMode ? 1 : 0) : 1
+    }, function () {
+        getLocationAndFetch();
+    }, function (e) {
+        getLocationAndFetch();
+    });
+}
+
 Pebble.addEventListener('ready', function () {
     var settings = JSON.parse(localStorage.getItem('clay-settings') || '{}');
     lang = settings.AppKeyLanguage || "en";
-    getLocationAndFetch();
+    sendSettingsToWatch(settings);
 });
 
 Pebble.addEventListener('showConfiguration', function (e) {
+    clay.config = configFn(lang);
     Pebble.openURL(clay.generateUrl());
 });
 
@@ -82,30 +93,33 @@ Pebble.addEventListener('webviewclosed', function (e) {
     if (e && !e.response) {
         return;
     }
+
+    // Get settings with value objects
     var dict = clay.getSettings(e.response, false);
+    var settings = {};
+
+    // Extract plain values
+    Object.keys(dict).forEach(function (key) {
+        if (dict[key] && typeof dict[key] === 'object' && 'value' in dict[key]) {
+            settings[key] = dict[key].value;
+        } else {
+            settings[key] = dict[key];
+        }
+    });
 
     // Map checkboxgroup booleans back to satellite names
-    if (dict.AppKeySatellites && Array.isArray(dict.AppKeySatellites)) {
-        var satelliteNames = ["ISS", "SO-50", "AO-27", "AO-91", "AO-92", "PO-101", "LilacSat-2", "IO-86", "SONATE-2", "HADES-D", "RS95S", "Tevel-1", "Tevel-2", "Tevel-3", "Tevel-4", "Tevel-5", "Tevel-6", "Tevel-7", "Tevel-8"];
+    if (settings.AppKeySatellites && Array.isArray(settings.AppKeySatellites)) {
+        var satelliteNames = ["ISS (Crossband)", "SO-50", "AO-27", "AO-91", "AO-92", "PO-101", "LilacSat-2", "IO-86", "SONATE-2", "HADES-D", "RS95S", "Tevel-1", "Tevel-2", "Tevel-3", "Tevel-4", "Tevel-5", "Tevel-6", "Tevel-7", "Tevel-8"];
         var selectedSats = [];
-        dict.AppKeySatellites.forEach(function (checked, index) {
+        settings.AppKeySatellites.forEach(function (checked, index) {
             if (checked && index < satelliteNames.length) {
                 selectedSats.push(satelliteNames[index]);
             }
         });
-        dict.AppKeySatellites = selectedSats;
+        settings.AppKeySatellites = selectedSats;
     }
 
-    localStorage.setItem('clay-settings', JSON.stringify(dict));
-    lang = dict.AppKeyLanguage || "en";
-
-    Pebble.sendAppMessage({
-        "AppKeyLanguage": lang,
-        "AppKeyAlertTime": dict.AppKeyAlertTime || 15,
-        "AppKeyNightMode": typeof dict.AppKeyNightMode !== 'undefined' ? (dict.AppKeyNightMode ? 1 : 0) : 1
-    }, function () {
-        getLocationAndFetch();
-    }, function (e) {
-        getLocationAndFetch();
-    });
+    localStorage.setItem('clay-settings', JSON.stringify(settings));
+    lang = settings.AppKeyLanguage || "en";
+    sendSettingsToWatch(settings);
 });
