@@ -28,7 +28,8 @@
       "AppKeyLocation",
       "AppKeyLanguage",
       "AppKeySatellites",
-      "AppKeyAlertTime"
+      "AppKeyAlertTime",
+      "AppKeyNightMode"
     ],
     "resources": {
       "media": []

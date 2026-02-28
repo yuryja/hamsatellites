@@ -39,6 +39,13 @@ var clayConfig = [
                 "min": 1,
                 "max": 30,
                 "step": 1
+            },
+            {
+                "type": "toggle",
+                "messageKey": "AppKeyNightMode",
+                "defaultValue": true,
+                "label": "Night Mode / Modo Nocturno",
+                "description": "Black background / Fondo negro"
             }
         ]
     },
@@ -103,20 +110,27 @@ function fetchSatellitePasses(lat, lon) {
     var satellites = settings.AppKeySatellites || ["ISS", "SO-50"];
 
     var mockPasses = satellites.map(function (satId, index) {
+        var tone = "None";
+        if (satId === "SO-50") tone = "67.0";
+        else if (satId === "AO-91" || satId === "AO-92") tone = "67.0";
+        else if (satId === "ISS") tone = "67.0";
+        else if (satId === "AO-27") tone = "None"; // Varies or doesn't use normally
+
         return {
             sat_id: satId,
             name: satId,
             start: Math.floor(Date.now() / 1000) + (index * 3600),
             end: Math.floor(Date.now() / 1000) + (index * 3600) + 600,
             uplink: "145.850",
-            downlink: "436.795"
+            downlink: "436.795",
+            tone: tone
         };
     });
 
     var messages = [];
     mockPasses.forEach(function (pass) {
         messages.push({
-            "AppKeySatellites": pass.name + "|" + pass.start + "|" + pass.end + "|" + pass.uplink + "|" + pass.downlink
+            "AppKeySatellites": pass.name + "|" + pass.start + "|" + pass.end + "|" + pass.uplink + "|" + pass.downlink + "|" + pass.tone
         });
     });
     sendNextMessage(messages);
@@ -162,7 +176,8 @@ Pebble.addEventListener('webviewclosed', function (e) {
 
     Pebble.sendAppMessage({
         "AppKeyLanguage": lang,
-        "AppKeyAlertTime": dict.AppKeyAlertTime || 15
+        "AppKeyAlertTime": dict.AppKeyAlertTime || 15,
+        "AppKeyNightMode": typeof dict.AppKeyNightMode !== 'undefined' ? (dict.AppKeyNightMode ? 1 : 0) : 1
     }, function () {
         getLocationAndFetch();
     }, function (e) {

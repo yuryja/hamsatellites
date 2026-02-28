@@ -13,14 +13,17 @@ typedef struct {
   time_t end_time;
   char uplink[16];
   char downlink[16];
+  char tone[16];
 } SatellitePass;
 
 static SatellitePass s_passes[MAX_SATELLITES];
 static int s_pass_count = 0;
 static int s_current_pass_index = 0;
 static int s_lang = LANG_EN;
+static bool s_night_mode = true;
 
 static Window *s_main_window;
+static Layer *s_canvas_layer;
 static TextLayer *s_name_layer;
 static TextLayer *s_times_layer;
 static TextLayer *s_freqs_layer;
@@ -49,15 +52,33 @@ static void update_view(void) {
   struct tm *s_tm = localtime(&pass->start_time);
   struct tm *e_tm = localtime(&pass->end_time);
   char start_buf[16], end_buf[16];
-  strftime(start_buf, sizeof(start_buf), "%H:%M", s_tm);
-  strftime(end_buf, sizeof(end_buf), "%H:%M", e_tm);
+
+  if (clock_is_24h_style()) {
+    strftime(start_buf, sizeof(start_buf), "%H:%M", s_tm);
+    strftime(end_buf, sizeof(end_buf), "%H:%M", e_tm);
+  } else {
+    strftime(start_buf, sizeof(start_buf), "%I:%M%p", s_tm);
+    strftime(end_buf, sizeof(end_buf), "%I:%M%p", e_tm);
+  }
+
   snprintf(s_time_buffer, sizeof(s_time_buffer), "%s - %s", start_buf, end_buf);
   text_layer_set_text(s_times_layer, s_time_buffer);
 
   static char s_freq_buffer[64];
-  snprintf(s_freq_buffer, sizeof(s_freq_buffer), "%s: %s\n%s: %s",
-           s_dict[s_lang][1], pass->uplink, s_dict[s_lang][2], pass->downlink);
+  if (strlen(pass->tone) > 0 && strcmp(pass->tone, "None") != 0) {
+    snprintf(s_freq_buffer, sizeof(s_freq_buffer), "%s: %s T:%s\n%s: %s",
+             s_dict[s_lang][1], pass->uplink, pass->tone, s_dict[s_lang][2],
+             pass->downlink);
+  } else {
+    snprintf(s_freq_buffer, sizeof(s_freq_buffer), "%s: %s\n%s: %s",
+             s_dict[s_lang][1], pass->uplink, s_dict[s_lang][2],
+             pass->downlink);
+  }
   text_layer_set_text(s_freqs_layer, s_freq_buffer);
+
+  if (s_canvas_layer) {
+    layer_mark_dirty(s_canvas_layer);
+  }
 }
 
 static void up_click_handler(ClickRecognizerRef recognizer, void *context) {
@@ -79,12 +100,60 @@ static void click_config_provider(void *context) {
   window_single_click_subscribe(BUTTON_ID_DOWN, down_click_handler);
 }
 
+static void canvas_update_proc(Layer *layer, GContext *ctx) {
+  if (s_pass_count <= 1)
+    return;
+
+  GRect bounds = layer_get_bounds(layer);
+  graphics_context_set_stroke_color(ctx,
+                                    s_night_mode ? GColorWhite : GColorBlack);
+
+  // Right margin, adjust for round screens avoiding the corner cutoff
+  int16_t x = bounds.size.w - PBL_IF_ROUND_ELSE(18, 12);
+
+  // Up indicator
+  if (s_current_pass_index > 0) {
+    int16_t y = PBL_IF_ROUND_ELSE(24, 10);
+    // Draw a double thickness chevron
+    for (int i = 0; i < 2; i++) {
+      graphics_draw_line(ctx, GPoint(x - 5, y + 5 + i), GPoint(x, y + i));
+      graphics_draw_line(ctx, GPoint(x, y + i), GPoint(x + 5, y + 5 + i));
+    }
+  }
+
+  // Down indicator
+  if (s_current_pass_index < s_pass_count - 1) {
+    int16_t y = bounds.size.h - PBL_IF_ROUND_ELSE(24, 10);
+    // Draw a double thickness chevron
+    for (int i = 0; i < 2; i++) {
+      graphics_draw_line(ctx, GPoint(x - 5, y - 5 + i), GPoint(x, y + i));
+      graphics_draw_line(ctx, GPoint(x, y + i), GPoint(x + 5, y - 5 + i));
+    }
+  }
+}
+
+static void apply_theme(void) {
+  GColor bg_color = s_night_mode ? GColorBlack : GColorWhite;
+  GColor fg_color = s_night_mode ? GColorWhite : GColorBlack;
+
+  window_set_background_color(s_main_window, bg_color);
+  text_layer_set_text_color(s_name_layer, fg_color);
+  text_layer_set_text_color(s_times_layer, fg_color);
+  text_layer_set_text_color(s_freqs_layer, fg_color);
+
+  if (s_canvas_layer) {
+    layer_mark_dirty(s_canvas_layer);
+  }
+}
+
 static void main_window_load(Window *window) {
-  window_set_background_color(window, GColorBlack);
   Layer *window_layer = window_get_root_layer(window);
   GRect bounds = layer_get_bounds(window_layer);
 
-  s_name_layer = text_layer_create(GRect(0, 20, bounds.size.w, 30));
+  // Center vertically by calculating total content height (~90px)
+  int start_y = (bounds.size.h - 90) / 2;
+
+  s_name_layer = text_layer_create(GRect(0, start_y, bounds.size.w, 28));
   text_layer_set_font(s_name_layer,
                       fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD));
   text_layer_set_text_alignment(s_name_layer, GTextAlignmentCenter);
@@ -92,25 +161,33 @@ static void main_window_load(Window *window) {
   text_layer_set_background_color(s_name_layer, GColorClear);
   layer_add_child(window_layer, text_layer_get_layer(s_name_layer));
 
-  s_times_layer = text_layer_create(GRect(0, 60, bounds.size.w, 30));
+  // Shifted up to remove gap
+  s_times_layer = text_layer_create(GRect(0, start_y + 28, bounds.size.w, 22));
   text_layer_set_font(s_times_layer,
-                      fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
+                      fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD));
   text_layer_set_text_alignment(s_times_layer, GTextAlignmentCenter);
   text_layer_set_text_color(s_times_layer, GColorWhite);
   text_layer_set_background_color(s_times_layer, GColorClear);
   layer_add_child(window_layer, text_layer_get_layer(s_times_layer));
 
-  s_freqs_layer = text_layer_create(GRect(0, 100, bounds.size.w, 60));
-  text_layer_set_font(s_freqs_layer, fonts_get_system_font(FONT_KEY_GOTHIC_24));
+  // Shifted up to remove gap
+  s_freqs_layer = text_layer_create(GRect(0, start_y + 48, bounds.size.w, 80));
+  text_layer_set_font(s_freqs_layer, fonts_get_system_font(FONT_KEY_GOTHIC_18));
   text_layer_set_text_alignment(s_freqs_layer, GTextAlignmentCenter);
   text_layer_set_text_color(s_freqs_layer, GColorWhite);
   text_layer_set_background_color(s_freqs_layer, GColorClear);
   layer_add_child(window_layer, text_layer_get_layer(s_freqs_layer));
 
+  s_canvas_layer = layer_create(bounds);
+  layer_set_update_proc(s_canvas_layer, canvas_update_proc);
+  layer_add_child(window_layer, s_canvas_layer);
+
+  apply_theme();
   update_view();
 }
 
 static void main_window_unload(Window *window) {
+  layer_destroy(s_canvas_layer);
   text_layer_destroy(s_name_layer);
   text_layer_destroy(s_times_layer);
   text_layer_destroy(s_freqs_layer);
@@ -130,6 +207,12 @@ static void in_recv_handler(DictionaryIterator *iterator, void *context) {
     else
       s_lang = LANG_EN;
     update_view();
+  }
+
+  Tuple *night_mode_t = dict_find(iterator, MESSAGE_KEY_AppKeyNightMode);
+  if (night_mode_t) {
+    s_night_mode = night_mode_t->value->int32 == 1;
+    apply_theme();
   }
 
   Tuple *sat_t = dict_find(iterator, MESSAGE_KEY_AppKeySatellites);
@@ -156,18 +239,33 @@ static void in_recv_handler(DictionaryIterator *iterator, void *context) {
             *down_str = '\0';
             down_str++;
 
+            char *tone_str = strchr(down_str, '|');
+            if (tone_str) {
+              *tone_str = '\0';
+              tone_str++;
+            }
+
             strncpy(s_passes[s_pass_count].name, name,
                     sizeof(s_passes[0].name) - 1);
             s_passes[s_pass_count].start_time = atoi(start_str);
             s_passes[s_pass_count].end_time = atoi(end_str);
             strncpy(s_passes[s_pass_count].uplink, up_str,
                     sizeof(s_passes[0].uplink) - 1);
-            s_passes[s_pass_count].downlink[sizeof(s_passes[0].downlink) - 1] =
-                '\0'; // Ensure null termination
+            s_passes[s_pass_count].uplink[sizeof(s_passes[0].uplink) - 1] =
+                '\0';
             strncpy(s_passes[s_pass_count].downlink, down_str,
                     sizeof(s_passes[0].downlink) - 1);
-            s_passes[s_pass_count].uplink[sizeof(s_passes[0].uplink) - 1] =
-                '\0'; // Ensure null termination
+            s_passes[s_pass_count].downlink[sizeof(s_passes[0].downlink) - 1] =
+                '\0';
+
+            if (tone_str) {
+              strncpy(s_passes[s_pass_count].tone, tone_str,
+                      sizeof(s_passes[0].tone) - 1);
+              s_passes[s_pass_count].tone[sizeof(s_passes[0].tone) - 1] = '\0';
+            } else {
+              s_passes[s_pass_count].tone[0] = '\0';
+            }
+
             s_pass_count++;
 
             update_view();
